@@ -49,26 +49,35 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 <h1>GYM TRACKER <span style="color:#a3e635">●</span></h1>
 <p>Your training. Your progress. Your data.</p>
 </header>
+
 <nav>
 <button class="active" data-tab="workout">Workout</button>
 <button data-tab="history">History</button>
 <button data-tab="progress">Progress</button>
 <button data-tab="timerTab">Rest timer</button>
 </nav>
+
 <main>
 <section id="workout" class="show">
 <div class="stats">
 <div class="stat"><strong id="totalWorkouts">0</strong><span>Workouts completed</span></div>
 <div class="stat"><strong id="totalVolume">0</strong><span>Total volume (kg)</span></div>
 </div>
+
 <div class="card">
-<h2>Today's workout</h2>
-<div id="workoutStatus" class="muted">Start a session when ready.</div>
+<h2 id="workoutHeading">Workout session</h2>
+<div id="workoutStatus" class="muted">Choose a date and start your workout.</div>
+
+<label for="workoutDate">Workout date and time</label>
+<input id="workoutDate" type="datetime-local">
+
 <div class="actions">
 <button class="primary" id="startBtn">Start workout</button>
-<button id="finishBtn" style="display:none">Finish workout</button>
+<button id="finishBtn" style="display:none">Save workout</button>
+<button class="danger" id="cancelEditBtn" style="display:none">Cancel editing</button>
 </div>
 </div>
+
 <div id="activeArea" style="display:none">
 <div class="card">
 <h3>Add exercise</h3>
@@ -88,7 +97,10 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 
 <section id="history">
 <h2>Workout history</h2>
-<div id="historyList" class="card"></div>
+<div class="card">
+<p class="muted">Edit any previous workout, including its date, exercises and sets.</p>
+<div id="historyList"></div>
+</div>
 </section>
 
 <section id="progress">
@@ -100,7 +112,10 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 <canvas id="chart" width="650" height="300"></canvas>
 <div id="chartInfo" class="muted"></div>
 </div>
-<div class="card"><h3>Training statistics</h3><div id="statistics" class="muted"></div></div>
+<div class="card">
+<h3>Training statistics</h3>
+<div id="statistics" class="muted"></div>
+</div>
 </section>
 
 <section id="timerTab">
@@ -122,234 +137,509 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 <script>
 const KEY="gymTrackerDataV1";
 const ACTIVE_KEY="gymTrackerActiveSessionV1";
-const defaults=["Chest Press","Shoulder Press","Lat Pulldown","Triceps Pushdown","Biceps Curl","Leg Press","Leg Extension","Leg Curl","Seated Row","Chest Fly","Lateral Raise","Squat","Deadlift","Plank","Wall Sit","Dead Hang","Abdominal Crunch"];
+
+const defaults=[
+"Chest Press","Shoulder Press","Lat Pulldown",
+"Triceps Pushdown","Biceps Curl","Leg Press",
+"Leg Extension","Leg Curl","Seated Row",
+"Chest Fly","Lateral Raise","Squat","Deadlift",
+"Plank","Wall Sit","Dead Hang","Abdominal Crunch"
+];
 
 let db;
 try{
  db=JSON.parse(localStorage.getItem(KEY))||{history:[],exercises:defaults};
  db.history=db.history||[];
  db.exercises=db.exercises||defaults;
-}catch(e){db={history:[],exercises:defaults}}
+}catch(e){
+ db={history:[],exercises:defaults};
+}
 
 let session=null;
-let timerSeconds=90,timerInterval=null;
+let editingIndex=null;
+let timerSeconds=90;
+let timerInterval=null;
 
-function saveData(){localStorage.setItem(KEY,JSON.stringify(db))}
-function saveActive(){
- if(session){
-  localStorage.setItem(ACTIVE_KEY,JSON.stringify(session));
-  document.getElementById("workoutStatus").textContent="Workout in progress · Auto-saved ✓";
- }
+function saveData(){
+ localStorage.setItem(KEY,JSON.stringify(db));
 }
-function restoreActive(){
- try{session=JSON.parse(localStorage.getItem(ACTIVE_KEY))||null}catch(e){session=null}
+
+function nowLocal(){
+ const d=new Date();
+ return new Date(d.getTime()-d.getTimezoneOffset()*60000)
+  .toISOString().slice(0,16);
+}
+
+function dateToISO(value){
+ return value?new Date(value).toISOString():new Date().toISOString();
+}
+
+function isoToLocal(value){
+ const d=new Date(value);
+ return new Date(d.getTime()-d.getTimezoneOffset()*60000)
+  .toISOString().slice(0,16);
+}
+
+function saveActive(){
  if(!session)return;
- session.exercises=(session.exercises||[]).map(e=>({
-  ...e,sets:(e.sets||[]).map(s=>({
-   weight:Number(s.weight)||0,reps:Number(s.reps)||0,seconds:Number(s.seconds)||0
-  }))
+ localStorage.setItem(ACTIVE_KEY,JSON.stringify({
+  session:session,
+  editingIndex:editingIndex
  }));
+ document.getElementById("workoutStatus").textContent=
+  "Workout automatically saved ✓";
+}
+
+function restoreActive(){
+ try{
+  const raw=JSON.parse(localStorage.getItem(ACTIVE_KEY));
+  if(!raw)return;
+
+  if(raw.session){
+   session=raw.session;
+   editingIndex=raw.editingIndex??null;
+  }else{
+   // Support unfinished sessions saved by the previous version.
+   session=raw;
+   editingIndex=null;
+  }
+ }catch(e){
+  session=null;
+  editingIndex=null;
+ }
+
+ if(!session)return;
+
+ document.getElementById("workoutDate").value=isoToLocal(session.date);
  document.getElementById("activeArea").style.display="block";
  document.getElementById("startBtn").style.display="none";
  document.getElementById("finishBtn").style.display="block";
- document.getElementById("workoutStatus").textContent="Workout restored · Auto-save active ✓";
+ document.getElementById("cancelEditBtn").style.display=
+  editingIndex!==null?"block":"none";
+ document.getElementById("workoutHeading").textContent=
+  editingIndex!==null?"Edit previous workout":"Workout session";
+ document.getElementById("workoutStatus").textContent=
+  "Workout restored · Auto-save active ✓";
+
  renderSession();
 }
-function fmt(n){return Math.round(n).toLocaleString("en")}
-function dateText(d){return new Date(d).toLocaleString()}
+
+function fmt(n){
+ return Math.round(n).toLocaleString("en");
+}
+
+function dateText(d){
+ return new Date(d).toLocaleString();
+}
+
+function esc(s){
+ return String(s).replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[c]));
+}
+
 function fillSelects(){
- let opts=db.exercises.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join("");
+ const opts=db.exercises.map(e=>
+  `<option value="${esc(e)}">${esc(e)}</option>`
+ ).join("");
+
  document.getElementById("exerciseSelect").innerHTML=opts;
  document.getElementById("chartExercise").innerHTML=opts;
 }
-function esc(s){
- return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
+
 function refreshStats(){
  document.getElementById("totalWorkouts").textContent=db.history.length;
- let v=db.history.reduce((a,w)=>a+w.exercises.reduce((b,e)=>b+e.sets.reduce((c,s)=>c+s.weight*s.reps,0),0),0);
- document.getElementById("totalVolume").textContent=fmt(v);
+
+ const volume=db.history.reduce((a,w)=>
+  a+w.exercises.reduce((b,e)=>
+   b+e.sets.reduce((c,s)=>c+s.weight*s.reps,0),0),0);
+
+ document.getElementById("totalVolume").textContent=fmt(volume);
 }
+
 function showTab(id){
- document.querySelectorAll("main section").forEach(s=>s.classList.toggle("show",s.id===id));
- document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===id));
+ document.querySelectorAll("main section").forEach(s=>
+  s.classList.toggle("show",s.id===id));
+
+ document.querySelectorAll("nav button").forEach(b=>
+  b.classList.toggle("active",b.dataset.tab===id));
+
  if(id==="history")renderHistory();
  if(id==="progress")renderProgress();
 }
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+document.querySelectorAll("nav button").forEach(b=>{
+ b.onclick=()=>showTab(b.dataset.tab);
+});
 
 document.getElementById("startBtn").onclick=()=>{
  if(session)return;
- session={date:new Date().toISOString(),exercises:[]};
+
+ session={
+  date:dateToISO(document.getElementById("workoutDate").value),
+  exercises:[]
+ };
+ editingIndex=null;
+
  saveActive();
+
  document.getElementById("activeArea").style.display="block";
  document.getElementById("startBtn").style.display="none";
  document.getElementById("finishBtn").style.display="block";
+ document.getElementById("cancelEditBtn").style.display="none";
+ document.getElementById("workoutHeading").textContent="Workout session";
+
  renderSession();
 };
 
-document.getElementById("addExerciseBtn").onclick=()=>addExercise(document.getElementById("exerciseSelect").value);
+document.getElementById("workoutDate").onchange=()=>{
+ if(session){
+  session.date=dateToISO(document.getElementById("workoutDate").value);
+  saveActive();
+ }
+};
+
+document.getElementById("addExerciseBtn").onclick=()=>{
+ addExercise(document.getElementById("exerciseSelect").value);
+};
+
 document.getElementById("customAddBtn").onclick=()=>{
- let name=document.getElementById("customExercise").value.trim();
+ const name=document.getElementById("customExercise").value.trim();
  if(!name)return;
- if(!db.exercises.includes(name)){db.exercises.push(name);db.exercises.sort();saveData();fillSelects()}
+
+ if(!db.exercises.includes(name)){
+  db.exercises.push(name);
+  db.exercises.sort();
+  saveData();
+  fillSelects();
+ }
+
  addExercise(name);
  document.getElementById("customExercise").value="";
 };
 
 function addExercise(name){
  if(!session||!name)return;
- session.exercises.push({name,sets:[
-  {weight:0,reps:0,seconds:0},
-  {weight:0,reps:0,seconds:0},
-  {weight:0,reps:0,seconds:0}
- ]});
+
+ session.exercises.push({
+  name:name,
+  sets:[
+   {weight:0,reps:0,seconds:0},
+   {weight:0,reps:0,seconds:0},
+   {weight:0,reps:0,seconds:0}
+  ]
+ });
+
  saveActive();
  renderSession();
 }
 
 function renderSession(){
- document.getElementById("exerciseList").innerHTML=session.exercises.map((e,i)=>`
+ document.getElementById("exerciseList").innerHTML=
+ session.exercises.map((e,i)=>`
  <div class="card">
- <div class="row"><h3>${esc(e.name)}</h3><button class="danger" onclick="removeExercise(${i})">Remove</button></div>
- <div class="set"><small>Set</small><small>Weight kg</small><small>Reps</small><small>Time sec</small><small></small></div>
+ <div class="row">
+ <h3>${esc(e.name)}</h3>
+ <button class="danger" onclick="removeExercise(${i})">Remove</button>
+ </div>
+
+ <div class="set">
+ <small>Set</small>
+ <small>Weight kg</small>
+ <small>Reps</small>
+ <small>Time sec</small>
+ <small></small>
+ </div>
+
  ${e.sets.map((s,j)=>`
  <div class="set">
  <small>${j+1}</small>
- <input type="number" min="0" step="0.5" placeholder="kg" value="${s.weight||""}" oninput="updateSet(${i},${j},'weight',this.value)">
- <input type="number" min="0" step="1" placeholder="reps" value="${s.reps||""}" oninput="updateSet(${i},${j},'reps',this.value)">
- <input type="number" min="0" step="1" placeholder="sec" value="${s.seconds||""}" oninput="updateSet(${i},${j},'seconds',this.value)">
+ <input type="number" min="0" step="0.5"
+  placeholder="kg" value="${s.weight||""}"
+  oninput="updateSet(${i},${j},'weight',this.value)">
+ <input type="number" min="0" step="1"
+  placeholder="reps" value="${s.reps||""}"
+  oninput="updateSet(${i},${j},'reps',this.value)">
+ <input type="number" min="0" step="1"
+  placeholder="sec" value="${s.seconds||""}"
+  oninput="updateSet(${i},${j},'seconds',this.value)">
  <button class="danger" onclick="removeSet(${i},${j})">×</button>
- </div>`).join("")}
+ </div>
+ `).join("")}
+
  <button onclick="addSet(${i})">+ Add set</button>
- </div>`).join("");
+ </div>
+ `).join("");
 }
 
 window.updateSet=(i,j,k,v)=>{
  session.exercises[i].sets[j][k]=Math.max(0,Number(v)||0);
  saveActive();
 };
+
 window.addSet=i=>{
  session.exercises[i].sets.push({weight:0,reps:0,seconds:0});
- saveActive();renderSession();
+ saveActive();
+ renderSession();
 };
+
 window.removeSet=(i,j)=>{
  session.exercises[i].sets.splice(j,1);
- saveActive();renderSession();
+ saveActive();
+ renderSession();
 };
+
 window.removeExercise=i=>{
  session.exercises.splice(i,1);
- saveActive();renderSession();
+ saveActive();
+ renderSession();
+};
+
+function resetEditor(){
+ session=null;
+ editingIndex=null;
+ localStorage.removeItem(ACTIVE_KEY);
+
+ document.getElementById("activeArea").style.display="none";
+ document.getElementById("startBtn").style.display="block";
+ document.getElementById("finishBtn").style.display="none";
+ document.getElementById("cancelEditBtn").style.display="none";
+ document.getElementById("workoutHeading").textContent="Workout session";
+ document.getElementById("workoutStatus").textContent="Choose a date and start your workout.";
+ document.getElementById("workoutDate").value=nowLocal();
+ document.getElementById("exerciseList").innerHTML="";
+}
+
+document.getElementById("cancelEditBtn").onclick=()=>{
+ if(!confirm("Cancel and discard the current changes?"))return;
+ resetEditor();
 };
 
 document.getElementById("finishBtn").onclick=()=>{
  if(!session)return;
- let valid=session.exercises.map(e=>({
-  ...e,sets:e.sets.filter(s=>s.reps>0||s.seconds>0)
+
+ const valid=session.exercises.map(e=>({
+  ...e,
+  sets:e.sets.filter(s=>s.reps>0||s.seconds>0)
  })).filter(e=>e.sets.length);
- if(!valid.length){alert("Enter reps or time for at least one set.");return}
+
+ if(!valid.length){
+  alert("Enter reps or time for at least one set.");
+  return;
+ }
+
  session.exercises=valid;
  session.end=new Date().toISOString();
- db.history.unshift(session);
+
+ if(editingIndex!==null){
+  db.history[editingIndex]=session;
+ }else{
+  db.history.unshift(session);
+ }
+
  saveData();
- localStorage.removeItem(ACTIVE_KEY);
- session=null;
- document.getElementById("activeArea").style.display="none";
- document.getElementById("startBtn").style.display="block";
- document.getElementById("finishBtn").style.display="none";
- document.getElementById("workoutStatus").textContent="Workout saved successfully!";
- refreshStats();renderHistory();
+ resetEditor();
+ document.getElementById("workoutStatus").textContent="Workout saved successfully ✓";
+ refreshStats();
+ renderHistory();
+ renderProgress();
 };
 
 function renderHistory(){
- let root=document.getElementById("historyList");
- if(!db.history.length){root.innerHTML='<div class="empty">No workouts yet.</div>';return}
+ const root=document.getElementById("historyList");
+
+ if(!db.history.length){
+  root.innerHTML='<div class="empty">No workouts yet.</div>';
+  return;
+ }
+
  root.innerHTML=db.history.map((w,i)=>{
-  let volume=w.exercises.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.weight*s.reps,0),0);
-  let count=w.exercises.reduce((a,e)=>a+e.sets.length,0);
-  return `<div class="history-item">
+  const volume=w.exercises.reduce((a,e)=>
+   a+e.sets.reduce((b,s)=>b+s.weight*s.reps,0),0);
+  const count=w.exercises.reduce((a,e)=>a+e.sets.length,0);
+
+  return `
+  <div class="history-item">
   <strong>${dateText(w.date)}</strong>
   <p class="muted">${w.exercises.map(e=>esc(e.name)).join(" · ")}</p>
   <p>${count} sets · ${fmt(volume)} kg volume</p>
-  ${w.exercises.map(e=>`<p class="muted">${esc(e.name)}: ${e.sets.map(s=>s.seconds?s.seconds+" sec":s.weight+" kg × "+s.reps).join(", ")}</p>`).join("")}
+  ${w.exercises.map(e=>`
+   <p class="muted">${esc(e.name)}:
+   ${e.sets.map(s=>s.seconds?s.seconds+" sec":s.weight+" kg × "+s.reps).join(", ")}
+   </p>
+  `).join("")}
+  <div class="actions">
+  <button class="primary" onclick="editWorkout(${i})">Edit workout</button>
   <button class="danger" onclick="deleteWorkout(${i})">Delete</button>
+  </div>
   </div>`;
  }).join("");
 }
+
+window.editWorkout=i=>{
+ if(session&&!confirm("Discard the current unfinished workout and edit this saved workout?"))return;
+
+ session=JSON.parse(JSON.stringify(db.history[i]));
+ editingIndex=i;
+
+ document.getElementById("workoutDate").value=isoToLocal(session.date);
+ document.getElementById("activeArea").style.display="block";
+ document.getElementById("startBtn").style.display="none";
+ document.getElementById("finishBtn").style.display="block";
+ document.getElementById("cancelEditBtn").style.display="block";
+ document.getElementById("workoutHeading").textContent="Edit previous workout";
+ document.getElementById("workoutStatus").textContent="Editing saved workout · Auto-save active ✓";
+
+ saveActive();
+ renderSession();
+ showTab("workout");
+};
+
 window.deleteWorkout=i=>{
- if(confirm("Delete this workout?")){
-  db.history.splice(i,1);saveData();refreshStats();renderHistory();renderProgress();
- }
+ if(!confirm("Delete this workout permanently?"))return;
+
+ db.history.splice(i,1);
+ saveData();
+ refreshStats();
+ renderHistory();
+ renderProgress();
 };
 
 function renderProgress(){
  fillSelects();
- let chosen=document.getElementById("chartExercise").value;
- let data=[];
+
+ const chosen=document.getElementById("chartExercise").value;
+ const data=[];
+
  db.history.slice().reverse().forEach(w=>{
-  let e=w.exercises.find(x=>x.name===chosen);
+  const e=w.exercises.find(x=>x.name===chosen);
   if(e){
-   let best=Math.max(...e.sets.map(s=>s.weight));
-   if(best>0)data.push({date:new Date(w.date).toLocaleDateString(),weight:best});
+   const best=Math.max(...e.sets.map(s=>s.weight));
+   if(best>0)data.push({
+    date:new Date(w.date).toLocaleDateString(),
+    weight:best
+   });
   }
  });
+
  drawChart(data);
+
  document.getElementById("chartInfo").textContent=data.length?
- "Latest best weight: "+data[data.length-1].weight+" kg":"No weight records for this exercise yet.";
- let sets=db.history.reduce((a,w)=>a+w.exercises.reduce((b,e)=>b+e.sets.length,0),0);
- document.getElementById("statistics").innerHTML=`Completed workouts: <b>${db.history.length}</b><br>Total sets: <b>${sets}</b><br>Exercises tracked: <b>${db.exercises.length}</b>`;
+ "Latest best weight: "+data[data.length-1].weight+" kg":
+ "No weight records for this exercise yet.";
+
+ const sets=db.history.reduce((a,w)=>
+  a+w.exercises.reduce((b,e)=>b+e.sets.length,0),0);
+
+ document.getElementById("statistics").innerHTML=
+ `Completed workouts: <b>${db.history.length}</b><br>
+ Total sets: <b>${sets}</b><br>
+ Exercises tracked: <b>${db.exercises.length}</b>`;
 }
+
 document.getElementById("chartExercise").onchange=renderProgress;
 
 function drawChart(data){
- let c=document.getElementById("chart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ const c=document.getElementById("chart");
+ const ctx=c.getContext("2d");
+ const w=c.width,h=c.height;
+
  ctx.clearRect(0,0,w,h);
- ctx.strokeStyle="#344438";ctx.fillStyle="#9baa9e";ctx.font="14px Arial";
- for(let i=0;i<5;i++){let y=25+i*(h-60)/4;ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(w-15,y);ctx.stroke()}
- if(!data.length){ctx.fillText("Complete workouts to see progress",65,145);return}
- let max=Math.max(5,...data.map(x=>x.weight))*1.15;
+ ctx.strokeStyle="#344438";
+ ctx.fillStyle="#9baa9e";
+ ctx.font="14px Arial";
+
+ for(let i=0;i<5;i++){
+  const y=25+i*(h-60)/4;
+  ctx.beginPath();
+  ctx.moveTo(45,y);
+  ctx.lineTo(w-15,y);
+  ctx.stroke();
+ }
+
+ if(!data.length){
+  ctx.fillText("Complete workouts to see progress",65,145);
+  return;
+ }
+
+ const max=Math.max(5,...data.map(x=>x.weight))*1.15;
+
  data.forEach((d,i)=>{
-  let x=55+(data.length===1?0:i*(w-90)/(data.length-1));
-  let y=h-35-(d.weight/max)*(h-75);
-  ctx.fillStyle="#a3e635";ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+  const x=55+(data.length===1?0:i*(w-90)/(data.length-1));
+  const y=h-35-(d.weight/max)*(h-75);
+
+  ctx.fillStyle="#a3e635";
+  ctx.beginPath();
+  ctx.arc(x,y,5,0,Math.PI*2);
+  ctx.fill();
+
   if(i){
-   let px=55+(i-1)*(w-90)/(data.length-1);
-   let py=h-35-(data[i-1].weight/max)*(h-75);
-   ctx.strokeStyle="#a3e635";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();
+   const px=55+(i-1)*(w-90)/(data.length-1);
+   const py=h-35-(data[i-1].weight/max)*(h-75);
+   ctx.strokeStyle="#a3e635";
+   ctx.lineWidth=3;
+   ctx.beginPath();
+   ctx.moveTo(px,py);
+   ctx.lineTo(x,y);
+   ctx.stroke();
   }
-  ctx.fillStyle="#f4f7f4";ctx.fillText(d.weight+"kg",x-15,y-12);
+
+  ctx.fillStyle="#f4f7f4";
+  ctx.fillText(d.weight+"kg",x-15,y-12);
  });
 }
 
 function updateTimerDisplay(){
- let m=Math.floor(timerSeconds/60),s=timerSeconds%60;
- document.getElementById("timer").textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+ const m=Math.floor(timerSeconds/60);
+ const s=timerSeconds%60;
+ document.getElementById("timer").textContent=
+  String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
 }
+
 document.getElementById("timerStart").onclick=()=>{
  if(timerInterval)return;
- if(timerSeconds<=0)timerSeconds=Math.round(Number(document.getElementById("timerMinutes").value)*60)||90;
+
+ if(timerSeconds<=0){
+  timerSeconds=Math.round(Number(document.getElementById("timerMinutes").value)*60)||90;
+ }
+
  timerInterval=setInterval(()=>{
-  timerSeconds--;updateTimerDisplay();
+  timerSeconds--;
+  updateTimerDisplay();
+
   if(timerSeconds<=0){
-   clearInterval(timerInterval);timerInterval=null;
-   document.getElementById("timerMessage").textContent="Rest complete! Get ready for your next set.";
+   clearInterval(timerInterval);
+   timerInterval=null;
+   document.getElementById("timerMessage").textContent=
+    "Rest complete! Get ready for your next set.";
    if("vibrate" in navigator)navigator.vibrate([300,150,300]);
   }
  },1000);
+
  document.getElementById("timerMessage").textContent="Resting...";
 };
+
 document.getElementById("timerPause").onclick=()=>{
- clearInterval(timerInterval);timerInterval=null;
+ clearInterval(timerInterval);
+ timerInterval=null;
  document.getElementById("timerMessage").textContent="Timer paused.";
 };
+
 document.getElementById("timerReset").onclick=()=>{
- clearInterval(timerInterval);timerInterval=null;
- timerSeconds=Math.max(1,Math.round(Number(document.getElementById("timerMinutes").value)*60));
+ clearInterval(timerInterval);
+ timerInterval=null;
+ timerSeconds=Math.max(1,Math.round(
+  Number(document.getElementById("timerMinutes").value)*60
+ ));
  updateTimerDisplay();
  document.getElementById("timerMessage").textContent="Ready for your next set?";
 };
-document.getElementById("timerMinutes").onchange=()=>document.getElementById("timerReset").click();
 
+document.getElementById("timerMinutes").onchange=()=>{
+ document.getElementById("timerReset").click();
+};
+
+document.getElementById("workoutDate").value=nowLocal();
 fillSelects();
 refreshStats();
 renderHistory();

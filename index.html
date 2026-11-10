@@ -7,34 +7,31 @@
 <meta name="theme-color" content="#101713">
 <title>Gym Tracker</title>
 <style>
-:root{color-scheme:dark;--bg:#101713;--panel:#1a241e;--line:#2b3a30;--green:#a3e635;--muted:#9baa9e;--white:#f4f7f4}
+:root{color-scheme:dark;--bg:#101713;--panel:#1a241e;--line:#2b3a30;--green:#a3e635;--muted:#9baa9e}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--white);font-family:system-ui,Arial,sans-serif}
+body{margin:0;background:var(--bg);color:#f4f7f4;font-family:system-ui,Arial}
 header{padding:24px 18px 15px;background:#17221a}
 header h1{margin:0;font-size:25px}
-header p{margin:5px 0 0;color:var(--muted);font-size:13px}
+header p{color:var(--muted);font-size:13px}
 nav{display:flex;gap:7px;padding:12px;position:sticky;top:0;background:var(--bg);z-index:5;overflow:auto}
-nav button{flex:1;min-width:max-content}
-button{border:0;border-radius:10px;padding:12px 15px;background:#2b3a30;color:white;font-weight:650;font-size:14px}
-button.primary{background:var(--green);color:#14200e}
-button.active{background:var(--green);color:#14200e}
+button{border:0;border-radius:10px;padding:12px 14px;background:#2b3a30;color:white;font-weight:650;font-size:14px}
+button.primary,.active{background:var(--green);color:#14200e}
 button.danger{background:#542d2d}
+nav button{flex:1;min-width:max-content}
 main{padding:5px 14px 100px;max-width:720px;margin:auto}
 section{display:none}
 section.show{display:block}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:15px;margin:12px 0}
-h2{font-size:19px;margin:8px 0 12px}
+h2{font-size:19px}
 h3{font-size:16px;margin:0 0 10px}
-.muted{color:var(--muted);font-size:13px}
+.muted,small{color:var(--muted);font-size:13px}
 label{display:block;color:var(--muted);font-size:12px;margin:8px 0 5px}
-input,select{width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#101713;color:white;font-size:16px;min-width:0}
-.row{display:flex;gap:8px;align-items:end}
-.row>*{flex:1}
-.set{display:grid;grid-template-columns:35px 1fr 1fr 35px;gap:7px;align-items:center;margin:8px 0}
-.set input{padding:10px;font-size:15px}
-.set small{color:var(--muted);text-align:center}
-.set button{padding:9px 5px}
-.exercise{border-top:1px solid var(--line);padding-top:13px;margin-top:13px}
+input,select{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:#101713;color:white;font-size:15px;min-width:0}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1;min-width:0}
+.set{display:grid;grid-template-columns:27px 1fr 1fr 1fr 30px;gap:5px;align-items:center;margin:9px 0}
+.set input{padding:10px 5px;font-size:14px}
+.set button{padding:8px 3px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .stat{background:#202d23;border-radius:12px;padding:14px}
 .stat strong{display:block;font-size:22px;color:var(--green)}
@@ -44,7 +41,6 @@ input,select{width:100%;padding:12px;border-radius:9px;border:1px solid var(--li
 #timer{font-size:48px;font-weight:750;text-align:center;color:var(--green);padding:15px}
 canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 .history-item{border-bottom:1px solid var(--line);padding:12px 0}
-.history-item:last-child{border:0}
 .empty{text-align:center;padding:30px 10px;color:var(--muted)}
 </style>
 </head>
@@ -53,40 +49,36 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 <h1>GYM TRACKER <span style="color:#a3e635">●</span></h1>
 <p>Your training. Your progress. Your data.</p>
 </header>
-
 <nav>
 <button class="active" data-tab="workout">Workout</button>
 <button data-tab="history">History</button>
 <button data-tab="progress">Progress</button>
 <button data-tab="timerTab">Rest timer</button>
 </nav>
-
 <main>
 <section id="workout" class="show">
 <div class="stats">
 <div class="stat"><strong id="totalWorkouts">0</strong><span>Workouts completed</span></div>
 <div class="stat"><strong id="totalVolume">0</strong><span>Total volume (kg)</span></div>
 </div>
-
 <div class="card">
 <h2>Today's workout</h2>
-<div id="workoutStatus" class="muted">Start a session when you're ready.</div>
+<div id="workoutStatus" class="muted">Start a session when ready.</div>
 <div class="actions">
 <button class="primary" id="startBtn">Start workout</button>
 <button id="finishBtn" style="display:none">Finish workout</button>
 </div>
 </div>
-
 <div id="activeArea" style="display:none">
 <div class="card">
 <h3>Add exercise</h3>
-<label for="exerciseSelect">Choose exercise</label>
+<label>Choose exercise</label>
 <div class="row">
 <select id="exerciseSelect"></select>
 <button id="addExerciseBtn" class="primary">Add</button>
 </div>
 <div class="row">
-<input id="customExercise" placeholder="Or enter custom exercise">
+<input id="customExercise" placeholder="Custom exercise name">
 <button id="customAddBtn">Add custom</button>
 </div>
 </div>
@@ -102,23 +94,20 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 <section id="progress">
 <h2>Strength progress</h2>
 <div class="card">
-<label for="chartExercise">Select exercise</label>
+<label>Select exercise</label>
 <select id="chartExercise"></select>
-<p class="muted">Best weight recorded per workout (kg).</p>
+<p class="muted">Best weight per workout (kg).</p>
 <canvas id="chart" width="650" height="300"></canvas>
 <div id="chartInfo" class="muted"></div>
 </div>
-<div class="card">
-<h3>Training statistics</h3>
-<div id="statistics" class="muted"></div>
-</div>
+<div class="card"><h3>Training statistics</h3><div id="statistics" class="muted"></div></div>
 </section>
 
 <section id="timerTab">
 <h2>Rest timer</h2>
 <div class="card">
 <div id="timer">01:30</div>
-<label for="timerMinutes">Rest duration (minutes)</label>
+<label>Rest duration (minutes)</label>
 <input id="timerMinutes" type="number" min="0.25" max="30" step="0.25" value="1.5">
 <div class="actions">
 <button class="primary" id="timerStart">Start</button>
@@ -132,160 +121,240 @@ canvas{width:100%;height:220px;background:#111a14;border-radius:10px}
 
 <script>
 const KEY="gymTrackerDataV1";
-const defaults=["Chest Press","Shoulder Press","Lat Pulldown","Triceps Pushdown","Biceps Curl","Leg Press","Leg Extension","Leg Curl","Seated Row","Chest Fly","Lateral Raise","Squat","Deadlift","Plank","Abdominal Crunch"];
+const ACTIVE_KEY="gymTrackerActiveSessionV1";
+const defaults=["Chest Press","Shoulder Press","Lat Pulldown","Triceps Pushdown","Biceps Curl","Leg Press","Leg Extension","Leg Curl","Seated Row","Chest Fly","Lateral Raise","Squat","Deadlift","Plank","Wall Sit","Dead Hang","Abdominal Crunch"];
 
 let db;
-try{db=JSON.parse(localStorage.getItem(KEY))||{history:[],exercises:defaults}}catch(e){db={history:[],exercises:defaults}}
+try{
+ db=JSON.parse(localStorage.getItem(KEY))||{history:[],exercises:defaults};
+ db.history=db.history||[];
+ db.exercises=db.exercises||defaults;
+}catch(e){db={history:[],exercises:defaults}}
+
 let session=null;
 let timerSeconds=90,timerInterval=null;
 
-function save(){localStorage.setItem(KEY,JSON.stringify(db))}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function saveData(){localStorage.setItem(KEY,JSON.stringify(db))}
+function saveActive(){
+ if(session){
+  localStorage.setItem(ACTIVE_KEY,JSON.stringify(session));
+  document.getElementById("workoutStatus").textContent="Workout in progress · Auto-saved ✓";
+ }
+}
+function restoreActive(){
+ try{session=JSON.parse(localStorage.getItem(ACTIVE_KEY))||null}catch(e){session=null}
+ if(!session)return;
+ session.exercises=(session.exercises||[]).map(e=>({
+  ...e,sets:(e.sets||[]).map(s=>({
+   weight:Number(s.weight)||0,reps:Number(s.reps)||0,seconds:Number(s.seconds)||0
+  }))
+ }));
+ document.getElementById("activeArea").style.display="block";
+ document.getElementById("startBtn").style.display="none";
+ document.getElementById("finishBtn").style.display="block";
+ document.getElementById("workoutStatus").textContent="Workout restored · Auto-save active ✓";
+ renderSession();
+}
 function fmt(n){return Math.round(n).toLocaleString("en")}
 function dateText(d){return new Date(d).toLocaleString()}
-function refreshStats(){
-document.getElementById("totalWorkouts").textContent=db.history.length;
-let volume=db.history.reduce((sum,w)=>sum+w.exercises.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.weight*s.reps,0),0),0);
-document.getElementById("totalVolume").textContent=fmt(volume);
-}
 function fillSelects(){
-let opts=db.exercises.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join("");
-document.getElementById("exerciseSelect").innerHTML=opts;
-document.getElementById("chartExercise").innerHTML=opts;
+ let opts=db.exercises.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join("");
+ document.getElementById("exerciseSelect").innerHTML=opts;
+ document.getElementById("chartExercise").innerHTML=opts;
+}
+function esc(s){
+ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function refreshStats(){
+ document.getElementById("totalWorkouts").textContent=db.history.length;
+ let v=db.history.reduce((a,w)=>a+w.exercises.reduce((b,e)=>b+e.sets.reduce((c,s)=>c+s.weight*s.reps,0),0),0);
+ document.getElementById("totalVolume").textContent=fmt(v);
 }
 function showTab(id){
-document.querySelectorAll("main section").forEach(s=>s.classList.toggle("show",s.id===id));
-document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===id));
-if(id==="history")renderHistory();
-if(id==="progress")renderProgress();
+ document.querySelectorAll("main section").forEach(s=>s.classList.toggle("show",s.id===id));
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.tab===id));
+ if(id==="history")renderHistory();
+ if(id==="progress")renderProgress();
 }
-document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 
 document.getElementById("startBtn").onclick=()=>{
-if(session)return;
-session={date:new Date().toISOString(),exercises:[]};
-document.getElementById("activeArea").style.display="block";
-document.getElementById("startBtn").style.display="none";
-document.getElementById("finishBtn").style.display="block";
-document.getElementById("workoutStatus").textContent="Workout in progress";
-renderSession();
+ if(session)return;
+ session={date:new Date().toISOString(),exercises:[]};
+ saveActive();
+ document.getElementById("activeArea").style.display="block";
+ document.getElementById("startBtn").style.display="none";
+ document.getElementById("finishBtn").style.display="block";
+ renderSession();
 };
+
 document.getElementById("addExerciseBtn").onclick=()=>addExercise(document.getElementById("exerciseSelect").value);
 document.getElementById("customAddBtn").onclick=()=>{
-let name=document.getElementById("customExercise").value.trim();
-if(name){if(!db.exercises.includes(name)){db.exercises.push(name);db.exercises.sort();save();fillSelects()}addExercise(name);document.getElementById("customExercise").value=""}
+ let name=document.getElementById("customExercise").value.trim();
+ if(!name)return;
+ if(!db.exercises.includes(name)){db.exercises.push(name);db.exercises.sort();saveData();fillSelects()}
+ addExercise(name);
+ document.getElementById("customExercise").value="";
 };
+
 function addExercise(name){
-if(!session||!name)return;
-session.exercises.push({name,sets:[{weight:0,reps:0},{weight:0,reps:0},{weight:0,reps:0}]});
-renderSession();
+ if(!session||!name)return;
+ session.exercises.push({name,sets:[
+  {weight:0,reps:0,seconds:0},
+  {weight:0,reps:0,seconds:0},
+  {weight:0,reps:0,seconds:0}
+ ]});
+ saveActive();
+ renderSession();
 }
+
 function renderSession(){
-let root=document.getElementById("exerciseList");
-root.innerHTML=session.exercises.map((e,i)=>`
-<div class="card">
-<div class="row"><h3>${esc(e.name)}</h3><button class="danger" onclick="removeExercise(${i})">Remove</button></div>
-<div class="set"><small>Set</small><small>Weight (kg)</small><small>Reps</small><small></small></div>
-${e.sets.map((s,j)=>`
-<div class="set">
-<small>${j+1}</small>
-<input type="number" min="0" step="0.5" value="${s.weight}" aria-label="Weight" onchange="updateSet(${i},${j},'weight',this.value)">
-<input type="number" min="0" step="1" value="${s.reps}" aria-label="Reps" onchange="updateSet(${i},${j},'reps',this.value)">
-<button class="danger" onclick="removeSet(${i},${j})">×</button>
-</div>`).join("")}
-<button onclick="addSet(${i})">+ Add set</button>
-</div>`).join("");
+ document.getElementById("exerciseList").innerHTML=session.exercises.map((e,i)=>`
+ <div class="card">
+ <div class="row"><h3>${esc(e.name)}</h3><button class="danger" onclick="removeExercise(${i})">Remove</button></div>
+ <div class="set"><small>Set</small><small>Weight kg</small><small>Reps</small><small>Time sec</small><small></small></div>
+ ${e.sets.map((s,j)=>`
+ <div class="set">
+ <small>${j+1}</small>
+ <input type="number" min="0" step="0.5" placeholder="kg" value="${s.weight||""}" oninput="updateSet(${i},${j},'weight',this.value)">
+ <input type="number" min="0" step="1" placeholder="reps" value="${s.reps||""}" oninput="updateSet(${i},${j},'reps',this.value)">
+ <input type="number" min="0" step="1" placeholder="sec" value="${s.seconds||""}" oninput="updateSet(${i},${j},'seconds',this.value)">
+ <button class="danger" onclick="removeSet(${i},${j})">×</button>
+ </div>`).join("")}
+ <button onclick="addSet(${i})">+ Add set</button>
+ </div>`).join("");
 }
-window.updateSet=(i,j,k,v)=>{session.exercises[i].sets[j][k]=Math.max(0,Number(v)||0)};
-window.addSet=i=>{session.exercises[i].sets.push({weight:0,reps:0});renderSession()};
-window.removeSet=(i,j)=>{session.exercises[i].sets.splice(j,1);renderSession()};
-window.removeExercise=i=>{session.exercises.splice(i,1);renderSession()};
+
+window.updateSet=(i,j,k,v)=>{
+ session.exercises[i].sets[j][k]=Math.max(0,Number(v)||0);
+ saveActive();
+};
+window.addSet=i=>{
+ session.exercises[i].sets.push({weight:0,reps:0,seconds:0});
+ saveActive();renderSession();
+};
+window.removeSet=(i,j)=>{
+ session.exercises[i].sets.splice(j,1);
+ saveActive();renderSession();
+};
+window.removeExercise=i=>{
+ session.exercises.splice(i,1);
+ saveActive();renderSession();
+};
 
 document.getElementById("finishBtn").onclick=()=>{
-if(!session)return;
-let valid=session.exercises.map(e=>({...e,sets:e.sets.filter(s=>s.reps>0)})).filter(e=>e.sets.length);
-if(!valid.length){alert("Log at least one set with reps before finishing.");return}
-session.exercises=valid;
-session.end=new Date().toISOString();
-db.history.unshift(session);
-save();session=null;
-document.getElementById("activeArea").style.display="none";
-document.getElementById("startBtn").style.display="block";
-document.getElementById("finishBtn").style.display="none";
-document.getElementById("workoutStatus").textContent="Workout saved successfully!";
-refreshStats();renderHistory();
+ if(!session)return;
+ let valid=session.exercises.map(e=>({
+  ...e,sets:e.sets.filter(s=>s.reps>0||s.seconds>0)
+ })).filter(e=>e.sets.length);
+ if(!valid.length){alert("Enter reps or time for at least one set.");return}
+ session.exercises=valid;
+ session.end=new Date().toISOString();
+ db.history.unshift(session);
+ saveData();
+ localStorage.removeItem(ACTIVE_KEY);
+ session=null;
+ document.getElementById("activeArea").style.display="none";
+ document.getElementById("startBtn").style.display="block";
+ document.getElementById("finishBtn").style.display="none";
+ document.getElementById("workoutStatus").textContent="Workout saved successfully!";
+ refreshStats();renderHistory();
 };
 
 function renderHistory(){
-let root=document.getElementById("historyList");
-if(!db.history.length){root.innerHTML='<div class="empty">No workouts yet. Complete your first workout to see it here.</div>';return}
-root.innerHTML=db.history.map((w,i)=>{
-let volume=w.exercises.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.weight*s.reps,0),0);
-let count=w.exercises.reduce((a,e)=>a+e.sets.length,0);
-return `<div class="history-item">
-<strong>${dateText(w.date)}</strong>
-<p class="muted">${w.exercises.map(e=>esc(e.name)).join(" · ")}</p>
-<p>${count} sets · ${fmt(volume)} kg total volume</p>
-<button class="danger" onclick="deleteWorkout(${i})">Delete</button>
-</div>`;
-}).join("");
+ let root=document.getElementById("historyList");
+ if(!db.history.length){root.innerHTML='<div class="empty">No workouts yet.</div>';return}
+ root.innerHTML=db.history.map((w,i)=>{
+  let volume=w.exercises.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.weight*s.reps,0),0);
+  let count=w.exercises.reduce((a,e)=>a+e.sets.length,0);
+  return `<div class="history-item">
+  <strong>${dateText(w.date)}</strong>
+  <p class="muted">${w.exercises.map(e=>esc(e.name)).join(" · ")}</p>
+  <p>${count} sets · ${fmt(volume)} kg volume</p>
+  ${w.exercises.map(e=>`<p class="muted">${esc(e.name)}: ${e.sets.map(s=>s.seconds?s.seconds+" sec":s.weight+" kg × "+s.reps).join(", ")}</p>`).join("")}
+  <button class="danger" onclick="deleteWorkout(${i})">Delete</button>
+  </div>`;
+ }).join("");
 }
-window.deleteWorkout=i=>{if(confirm("Delete this workout?")){db.history.splice(i,1);save();refreshStats();renderHistory();renderProgress()}};
+window.deleteWorkout=i=>{
+ if(confirm("Delete this workout?")){
+  db.history.splice(i,1);saveData();refreshStats();renderHistory();renderProgress();
+ }
+};
 
 function renderProgress(){
-fillSelects();
-let chosen=document.getElementById("chartExercise").value;
-let data=[];
-db.history.slice().reverse().forEach(w=>{
-let e=w.exercises.find(x=>x.name===chosen);
-if(e){let best=Math.max(...e.sets.map(s=>s.weight));data.push({date:new Date(w.date).toLocaleDateString(),weight:best})}
-});
-drawChart(data);
-document.getElementById("chartInfo").textContent=data.length?`Latest recorded best: ${data[data.length-1].weight} kg`:"No records for this exercise yet.";
-let sets=db.history.reduce((a,w)=>a+w.exercises.reduce((b,e)=>b+e.sets.length,0),0);
-document.getElementById("statistics").innerHTML=`Completed workouts: <b>${db.history.length}</b><br>Total sets: <b>${sets}</b><br>Exercises tracked: <b>${db.exercises.length}</b>`;
+ fillSelects();
+ let chosen=document.getElementById("chartExercise").value;
+ let data=[];
+ db.history.slice().reverse().forEach(w=>{
+  let e=w.exercises.find(x=>x.name===chosen);
+  if(e){
+   let best=Math.max(...e.sets.map(s=>s.weight));
+   if(best>0)data.push({date:new Date(w.date).toLocaleDateString(),weight:best});
+  }
+ });
+ drawChart(data);
+ document.getElementById("chartInfo").textContent=data.length?
+ "Latest best weight: "+data[data.length-1].weight+" kg":"No weight records for this exercise yet.";
+ let sets=db.history.reduce((a,w)=>a+w.exercises.reduce((b,e)=>b+e.sets.length,0),0);
+ document.getElementById("statistics").innerHTML=`Completed workouts: <b>${db.history.length}</b><br>Total sets: <b>${sets}</b><br>Exercises tracked: <b>${db.exercises.length}</b>`;
 }
 document.getElementById("chartExercise").onchange=renderProgress;
+
 function drawChart(data){
-let c=document.getElementById("chart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
-ctx.clearRect(0,0,w,h);
-ctx.strokeStyle="#344438";ctx.fillStyle="#9baa9e";ctx.font="14px Arial";
-for(let i=0;i<5;i++){let y=25+i*(h-60)/4;ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(w-15,y);ctx.stroke()}
-if(!data.length){ctx.fillText("Complete workouts to see your progress",65,145);return}
-let max=Math.max(5,...data.map(x=>x.weight))*1.15;
-data.forEach((d,i)=>{
-let x=55+(data.length===1?0:i*(w-90)/(data.length-1));
-let y=h-35-(d.weight/max)*(h-75);
-ctx.fillStyle="#a3e635";ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
-if(i){let px=55+(i-1)*(w-90)/(data.length-1),py=h-35-(data[i-1].weight/max)*(h-75);ctx.strokeStyle="#a3e635";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke()}
-ctx.fillStyle="#f4f7f4";ctx.fillText(d.weight+"kg",x-15,y-12);
-});
-ctx.fillStyle="#9baa9e";ctx.fillText(data[0].date,45,h-10);
-if(data.length>1)ctx.fillText(data[data.length-1].date,w-100,h-10);
+ let c=document.getElementById("chart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);
+ ctx.strokeStyle="#344438";ctx.fillStyle="#9baa9e";ctx.font="14px Arial";
+ for(let i=0;i<5;i++){let y=25+i*(h-60)/4;ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(w-15,y);ctx.stroke()}
+ if(!data.length){ctx.fillText("Complete workouts to see progress",65,145);return}
+ let max=Math.max(5,...data.map(x=>x.weight))*1.15;
+ data.forEach((d,i)=>{
+  let x=55+(data.length===1?0:i*(w-90)/(data.length-1));
+  let y=h-35-(d.weight/max)*(h-75);
+  ctx.fillStyle="#a3e635";ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+  if(i){
+   let px=55+(i-1)*(w-90)/(data.length-1);
+   let py=h-35-(data[i-1].weight/max)*(h-75);
+   ctx.strokeStyle="#a3e635";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(x,y);ctx.stroke();
+  }
+  ctx.fillStyle="#f4f7f4";ctx.fillText(d.weight+"kg",x-15,y-12);
+ });
 }
 
 function updateTimerDisplay(){
-let m=Math.floor(timerSeconds/60),s=timerSeconds%60;
-document.getElementById("timer").textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+ let m=Math.floor(timerSeconds/60),s=timerSeconds%60;
+ document.getElementById("timer").textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
 }
 document.getElementById("timerStart").onclick=()=>{
-if(timerInterval)return;
-if(timerSeconds<=0)timerSeconds=Math.round(Number(document.getElementById("timerMinutes").value)*60)||90;
-timerInterval=setInterval(()=>{
-timerSeconds--;updateTimerDisplay();
-if(timerSeconds<=0){clearInterval(timerInterval);timerInterval=null;document.getElementById("timerMessage").textContent="Rest complete! Get ready for your next set.";if("vibrate" in navigator)navigator.vibrate([300,150,300])}
-},1000);
-document.getElementById("timerMessage").textContent="Resting...";
+ if(timerInterval)return;
+ if(timerSeconds<=0)timerSeconds=Math.round(Number(document.getElementById("timerMinutes").value)*60)||90;
+ timerInterval=setInterval(()=>{
+  timerSeconds--;updateTimerDisplay();
+  if(timerSeconds<=0){
+   clearInterval(timerInterval);timerInterval=null;
+   document.getElementById("timerMessage").textContent="Rest complete! Get ready for your next set.";
+   if("vibrate" in navigator)navigator.vibrate([300,150,300]);
+  }
+ },1000);
+ document.getElementById("timerMessage").textContent="Resting...";
 };
-document.getElementById("timerPause").onclick=()=>{clearInterval(timerInterval);timerInterval=null;document.getElementById("timerMessage").textContent="Timer paused."};
+document.getElementById("timerPause").onclick=()=>{
+ clearInterval(timerInterval);timerInterval=null;
+ document.getElementById("timerMessage").textContent="Timer paused.";
+};
 document.getElementById("timerReset").onclick=()=>{
-clearInterval(timerInterval);timerInterval=null;
-timerSeconds=Math.max(1,Math.round(Number(document.getElementById("timerMinutes").value)*60));
-updateTimerDisplay();document.getElementById("timerMessage").textContent="Ready for your next set?";
+ clearInterval(timerInterval);timerInterval=null;
+ timerSeconds=Math.max(1,Math.round(Number(document.getElementById("timerMinutes").value)*60));
+ updateTimerDisplay();
+ document.getElementById("timerMessage").textContent="Ready for your next set?";
 };
 document.getElementById("timerMinutes").onchange=()=>document.getElementById("timerReset").click();
 
-fillSelects();refreshStats();renderHistory();updateTimerDisplay();
+fillSelects();
+refreshStats();
+renderHistory();
+updateTimerDisplay();
+restoreActive();
 </script>
 </body>
 </html>
